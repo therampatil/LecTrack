@@ -624,6 +624,8 @@ body.auth-body {
 /* ══════════════════════════════════════
    RESPONSIVE
    ══════════════════════════════════════ */
+
+/* ── Tablet (≤ 880px) ── */
 @media (max-width: 880px) {
   .auth-layout,
   .auth-layout-signup {
@@ -634,7 +636,7 @@ body.auth-body {
   .auth-left {
     position: static;
     height: auto;
-    padding: 28px 24px;
+    padding: 18px 20px;
     border-right: none;
     border-bottom: 3px solid var(--black);
     flex-direction: row;
@@ -642,55 +644,98 @@ body.auth-body {
     flex-wrap: wrap;
     gap: 0;
   }
-
-  .auth-left-body {
-    display: none;
-  }
+  .auth-left-body,
   .auth-left-footer {
     display: none;
   }
-
   .auth-brand {
     margin-bottom: 0;
   }
 
   .auth-right {
-    padding: 28px 16px 48px;
+    padding: 28px 20px 48px;
   }
-
   .auth-card,
   .auth-card-signup {
     max-width: 100%;
   }
-
   .form-row {
     grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 480px) {
-  .btn-google,
-  .auth-form {
-    padding-left: 18px;
-    padding-right: 18px;
+/* ── Phone (≤ 540px) ── */
+@media (max-width: 540px) {
+  .auth-left {
+    padding: 14px 16px;
   }
+  .auth-brand-name {
+    font-size: 18px;
+  }
+  .auth-brand-icon {
+    font-size: 22px;
+  }
+
+  .auth-right {
+    padding: 20px 12px 48px;
+  }
+
+  .auth-card-header {
+    padding: 20px 16px 14px;
+  }
+  .auth-card-title {
+    font-size: 22px;
+  }
+  .auth-card-sub {
+    font-size: 13px;
+  }
+
   .btn-google {
-    width: calc(100% - 36px);
-    margin-left: 18px;
-    margin-right: 18px;
+    width: calc(100% - 32px);
+    margin-left: 16px;
+    margin-right: 16px;
+    font-size: 14px;
+    padding: 12px 16px;
   }
   .auth-divider {
-    margin-left: 18px;
-    margin-right: 18px;
+    margin-left: 16px;
+    margin-right: 16px;
   }
-  .auth-card-header {
-    padding: 22px 18px 16px;
+
+  .auth-form {
+    padding-left: 16px;
+    padding-right: 16px;
   }
+  .form-group {
+    gap: 5px;
+  }
+  .form-input {
+    font-size: 14px;
+    padding: 10px 12px;
+  }
+  .form-label {
+    font-size: 11px;
+  }
+
+  .btn-auth-submit {
+    font-size: 15px;
+    padding: 13px 20px;
+  }
+
   .auth-card-foot {
-    padding-left: 18px;
-    padding-right: 18px;
+    padding-left: 16px;
+    padding-right: 16px;
+    font-size: 12px;
   }
+
   .auth-tagline h1 {
-    font-size: 36px;
+    font-size: 32px;
+  }
+  .auth-toast {
+    font-size: 13px;
+    padding: 11px 18px;
+    white-space: normal;
+    text-align: center;
+    max-width: 90vw;
   }
 }

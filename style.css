@@ -1831,19 +1831,65 @@ body {
 /* ══════════════════════════════════════
    RESPONSIVE
    ══════════════════════════════════════ */
+
+/* ── Tablet (≤ 900px) ── */
 @media (max-width: 900px) {
+  /* NAV */
+  #nav {
+    padding: 0 16px;
+    gap: 10px;
+  }
+  .nav-steps {
+    display: none;
+  }
+  .logo-text {
+    font-size: 17px;
+  }
+  #confusion-badge {
+    font-size: 12px;
+    padding: 6px 12px;
+    gap: 4px;
+  }
+  .badge-arrow {
+    display: none;
+  }
+
+  /* LOBBY */
+  .lobby-title {
+    font-size: 36px;
+    letter-spacing: -1.5px;
+  }
+  .lobby-sub {
+    font-size: 14px;
+  }
+  .lecture-grid {
+    grid-template-columns: 1fr 1fr;
+    padding: 18px 20px 22px;
+    gap: 14px;
+  }
+  .noticeboard-top {
+    padding: 14px 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  /* CLASSROOM */
   .classroom-layout {
     grid-template-columns: 1fr;
   }
   .roster-panel {
     display: none;
   }
+
+  /* DISCUSSION */
   .rooms-grid {
     grid-template-columns: 1fr 1fr;
   }
-  .nav-steps {
-    display: none;
+  .disc-title {
+    font-size: 32px;
   }
+
+  /* MODALS */
   #notebook-modal,
   #tt-editor-modal {
     width: 95vw;
@@ -1852,40 +1898,177 @@ body {
     width: 95vw;
     height: 80vh;
   }
-  .lecture-grid {
-    grid-template-columns: 1fr 1fr;
-  }
 }
-@media (max-width: 580px) {
-  .lecture-grid {
-    grid-template-columns: 1fr;
+
+/* ── Large Phone (≤ 680px) ── */
+@media (max-width: 680px) {
+  /* NAV */
+  #nav {
+    padding: 0 12px;
+    gap: 8px;
   }
+  .logo-icon {
+    font-size: 18px;
+  }
+  .logo-text {
+    font-size: 15px;
+  }
+  #back-btn {
+    padding: 7px 12px;
+    font-size: 12px;
+  }
+  #confusion-badge {
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+
+  /* LOBBY */
   .lobby-title {
     font-size: 30px;
     letter-spacing: -1px;
   }
+  .noticeboard-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  /* MODALS */
+  .modal-header {
+    padding: 16px 16px 0;
+  }
+  .modal-footer {
+    padding: 14px 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .modal-footer-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .chat-header {
+    padding: 14px 16px;
+  }
+  .chat-input-area {
+    padding: 10px 12px;
+  }
+}
+
+/* ── Phone (≤ 580px) ── */
+@media (max-width: 580px) {
+  /* NAV — hide back-btn text label, keep icon */
+  #back-btn span {
+    display: none;
+  }
+  .nav-avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 11px;
+  }
+
+  /* LOBBY */
+  .lecture-grid {
+    grid-template-columns: 1fr;
+    padding: 14px 14px 18px;
+    gap: 12px;
+  }
+  .lobby-title {
+    font-size: 26px;
+  }
+  .lobby-sub {
+    font-size: 13px;
+  }
+  .lobby-hint {
+    font-size: 12px;
+    text-align: center;
+    padding: 0 12px;
+  }
+  #scene-lobby,
+  #scene-discussion {
+    padding: 20px 12px 40px;
+  }
+  #scene-classroom {
+    padding: 16px 10px;
+  }
+
+  /* NOTICEBOARD */
+  .noticeboard-top {
+    padding: 12px 14px;
+  }
+  .noticeboard-meta {
+    font-size: 12px;
+    gap: 8px;
+  }
+  .btn-outline-sm {
+    font-size: 12px;
+    padding: 7px 12px;
+  }
+
+  /* LECTURE CARD */
+  .lecture-card {
+    padding: 16px 14px 14px;
+  }
+  .lc-subject {
+    font-size: 14px;
+  }
+
+  /* CLASSROOM */
+  .chalkboard-header,
+  .chalkboard-body,
+  .chalkboard-footer {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .chalkboard-footer {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .chalkboard-footer .btn-primary,
+  .chalkboard-footer .btn-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* DISCUSSION */
   .disc-title {
-    font-size: 28px;
+    font-size: 26px;
+    letter-spacing: -1px;
   }
   .rooms-grid {
     grid-template-columns: 1fr;
   }
-  #scene-lobby,
-  #scene-discussion {
-    padding: 28px 16px 48px;
+
+  /* MODALS – full screen feel */
+  #notebook-modal,
+  #tt-editor-modal {
+    width: 100vw;
+    max-width: 100%;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    margin-top: auto;
   }
-  #scene-classroom {
-    padding: 20px 12px;
+  #notebook-overlay,
+  #tt-editor-overlay {
+    align-items: flex-end;
   }
-  .chalkboard-header,
-  .chalkboard-body,
-  .chalkboard-footer {
-    padding-left: 18px;
-    padding-right: 18px;
+  #chat-modal {
+    width: 100vw;
+    height: 85vh;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   }
-  .noticeboard-top,
-  .lecture-grid {
-    padding-left: 16px;
-    padding-right: 16px;
+  #chat-overlay {
+    align-items: flex-end;
+  }
+  .modal-title {
+    font-size: 16px;
+  }
+  .modal-sub {
+    font-size: 12px;
+  }
+
+  /* CONFUSED STRIP */
+  .confused-summary-strip {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
   }
 }
