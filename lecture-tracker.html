@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClassQuest – Lecture Confusion Tracker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&family=Nunito:wght@400;600;700;800&display=swap');
+
+  :root {
+    --chalk: #f5f0e8; --board: #2d5a27; --paper: #FFF9F0;
+    --accent: #FF6B6B; --blue: #4ECDC4; --yellow: #FFE66D;
+    --purple: #A855F7; --green: #5DBB63;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Nunito',sans-serif; background:#0f0f1a; overflow:hidden; height:100vh; width:100vw; }
+
+  /* NAV */
+  #nav { position:fixed; top:0; left:0; right:0; z-index:100; background:rgba(10,10,25,0.97); border-bottom:2px solid #2a2a44; display:flex; align-items:center; gap:12px; padding:8px 20px; }
+  .logo { font-family:'Press Start 2P',monospace; font-size:11px; color:var(--yellow); text-shadow:2px 2px #ff6b6b; }
+  #nav .steps { display:flex; gap:6px; margin-left:auto; }
+  .step-pill { padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700; border:2px solid #333; color:#666; transition:all 0.3s; }
+  .step-pill.active { background:var(--yellow); color:#000; border-color:var(--yellow); }
+  .step-pill.done { background:var(--green); color:#fff; border-color:var(--green); }
+
+  /* SCENES */
+  .scene { position:absolute; top:0; left:0; width:100%; height:100%; display:none; overflow:hidden; }
+  .scene.visible { display:block; }
+
+  /* LOBBY */
+  #scene-lobby { background:linear-gradient(180deg,#1a1a3e 0%,#2d2d5e 40%,#4a3728 100%); }
+  .lobby-wall { position:absolute; top:44px; left:0; right:0; height:62%; background:linear-gradient(180deg,#2a2a4a,#1e1e3a); }
+  .lobby-wall::before { content:''; position:absolute; inset:0; background-image:repeating-linear-gradient(transparent 0px,transparent 18px,rgba(0,0,0,0.15) 18px,rgba(0,0,0,0.15) 20px),repeating-linear-gradient(90deg,transparent 0px,transparent 58px,rgba(0,0,0,0.1) 58px,rgba(0,0,0,0.1) 60px); }
+  .lobby-floor { position:absolute; bottom:0; left:0; right:0; height:38%; background:linear-gradient(180deg,#3d2e1e,#2a1f14); border-top:4px solid #5a4030; }
+  .lobby-floor::after { content:''; position:absolute; inset:0; background-image:linear-gradient(rgba(255,255,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.04) 1px,transparent 1px); background-size:60px 60px; }
+  .ceiling-light { position:absolute; top:48px; width:60px; height:8px; background:var(--yellow); border-radius:4px; box-shadow:0 0 30px 15px rgba(255,230,109,0.25),0 0 60px 30px rgba(255,230,109,0.08); }
+
+  /* NOTICEBOARD */
+  #noticeboard { position:absolute; top:78px; left:50%; transform:translateX(-50%); width:650px; background:#8B6914; border:5px solid #6B4F10; border-radius:4px; padding:8px; box-shadow:0 8px 30px rgba(0,0,0,0.6); }
+  .board-header { background:#C1440E; color:var(--chalk); font-family:'Press Start 2P',monospace; font-size:9px; text-align:center; padding:8px 12px; letter-spacing:2px; margin-bottom:6px; border-radius:2px; display:flex; align-items:center; justify-content:center; gap:10px; }
+  .edit-tt-btn { background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.35); color:var(--chalk); font-family:'Nunito',sans-serif; font-size:11px; font-weight:800; padding:4px 12px; border-radius:10px; cursor:pointer; transition:all 0.2s; white-space:nowrap; flex-shrink:0; }
+  .edit-tt-btn:hover { background:rgba(255,255,255,0.3); }
+  .board-inner { background:#f5e6c8; padding:12px; display:grid; grid-template-columns:1fr 1fr; gap:10px; border-radius:2px; min-height:180px; }
+  .lecture-card { background:white; border-radius:4px; padding:10px 12px; cursor:pointer; transition:all 0.2s; border-left:5px solid var(--accent); box-shadow:2px 2px 5px rgba(0,0,0,0.15); position:relative; overflow:hidden; }
+  .card-pin { position:absolute; top:-4px; right:8px; font-size:18px; transform:rotate(10deg); pointer-events:none; }
+  .lecture-card:hover { transform:translateY(-3px) scale(1.02); box-shadow:4px 6px 15px rgba(0,0,0,0.25); }
+  .lc-subject { font-family:'Press Start 2P',monospace; font-size:7px; color:#333; margin-bottom:4px; }
+  .lc-room { font-size:10px; color:#999; margin-top:2px; }
+  .lc-topics { margin-top:6px; display:flex; gap:4px; flex-wrap:wrap; }
+  .topic-chip { font-size:9px; padding:2px 6px; background:#f0f0f0; border-radius:10px; color:#555; border:1px solid #ddd; }
+  .click-hint { font-size:9px; color:#bbb; font-style:italic; margin-top:6px; }
+
+  /* AVATAR */
+  #avatar-lobby { position:absolute; bottom:38%; left:50%; transform:translateX(-50%); width:50px; height:80px; transition:left 0.8s ease; }
+  .speech-bubble { position:absolute; background:white; border-radius:12px; padding:8px 12px; font-size:11px; color:#333; font-weight:700; white-space:nowrap; box-shadow:0 4px 15px rgba(0,0,0,0.2); bottom:85px; left:50%; transform:translateX(-50%); animation:bubblePop 0.3s ease; min-width:120px; text-align:center; }
+  .speech-bubble::after { content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%); border:8px solid transparent; border-top-color:white; }
+  @keyframes bubblePop { from{transform:translateX(-50%) scale(0.5);opacity:0} to{transform:translateX(-50%) scale(1);opacity:1} }
+  .lobby-instruction { position:absolute; bottom:14px; left:50%; transform:translateX(-50%); color:rgba(255,255,255,0.6); font-size:12px; text-align:center; font-weight:600; animation:pulse 2s infinite; white-space:nowrap; }
+  @keyframes pulse { 0%,100%{opacity:0.6} 50%{opacity:1} }
+
+  /* CLASSROOM */
+  #scene-classroom { background:linear-gradient(180deg,#1a0f05,#2d1810); }
+  .class-wall { position:absolute; top:44px; left:0; right:0; height:55%; background:linear-gradient(180deg,#c9a882,#b8956e); background-image:repeating-linear-gradient(transparent 0px,transparent 24px,rgba(139,105,20,0.15) 24px,rgba(139,105,20,0.15) 26px),repeating-linear-gradient(90deg,transparent 0px,transparent 74px,rgba(139,105,20,0.1) 74px,rgba(139,105,20,0.1) 76px); }
+  #chalkboard { position:absolute; top:58px; left:50%; transform:translateX(-50%); width:65%; max-width:700px; height:240px; background:var(--board); border:12px solid #4a3520; border-radius:4px; padding:16px; box-shadow:0 8px 30px rgba(0,0,0,0.5),inset 0 0 30px rgba(0,0,0,0.2); }
+  .board-title { font-family:'VT323',monospace; font-size:26px; color:rgba(245,240,232,0.9); text-align:center; margin-bottom:10px; }
+  .chalk-topics { display:flex; flex-direction:column; gap:5px; overflow-y:auto; max-height:185px; }
+  .chalk-line { font-family:'VT323',monospace; font-size:20px; color:rgba(245,240,232,0.7); padding:2px 8px; cursor:pointer; border-radius:3px; transition:all 0.2s; display:flex; align-items:center; gap:8px; }
+  .chalk-line:hover { background:rgba(255,255,255,0.08); color:rgba(245,240,232,0.95); }
+  .chalk-line.confused { color:var(--accent)!important; background:rgba(255,107,107,0.1); }
+  .confused-dot { width:8px; height:8px; border-radius:50%; background:var(--accent); flex-shrink:0; animation:blink 1s infinite; display:none; }
+  .chalk-line.confused .confused-dot { display:block; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .class-floor { position:absolute; bottom:0; left:0; right:0; height:40%; background:linear-gradient(180deg,#5a3a1e,#3d2610); border-top:4px solid #7a5030; }
+  .class-floor::after { content:''; position:absolute; inset:0; background-image:linear-gradient(rgba(255,255,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.03) 1px,transparent 1px); background-size:80px 80px; }
+  .desk-row { position:absolute; bottom:16%; left:0; right:0; display:flex; justify-content:center; gap:30px; align-items:flex-end; }
+  .desk { width:100px; height:40px; background:linear-gradient(180deg,#D4A853,#B8902E); border-radius:4px 4px 0 0; border:2px solid #9A7520; position:relative; box-shadow:0 4px 0 #7A5810,0 6px 10px rgba(0,0,0,0.3); }
+  .desk::after { content:''; position:absolute; bottom:-20px; left:10px; right:10px; height:20px; background:#9A7520; border-radius:0 0 4px 4px; }
+  .my-desk { border-color:var(--yellow); background:linear-gradient(180deg,#F0C060,#D4A040); box-shadow:0 4px 0 #A07820,0 6px 15px rgba(255,230,100,0.3); }
+  .desk-avatar { position:absolute; top:-75px; left:50%; transform:translateX(-50%); }
+  #open-notebook-btn { position:absolute; bottom:22%; left:50%; transform:translateX(-50%); background:var(--yellow); color:#000; font-family:'Press Start 2P',monospace; font-size:8px; padding:10px 18px; border:none; border-radius:4px; cursor:pointer; transition:all 0.2s; box-shadow:0 4px 0 #b8962a; z-index:10; }
+  #open-notebook-btn:hover { transform:translateX(-50%) translateY(-2px); box-shadow:0 6px 0 #b8962a; }
+
+  /* DISCUSSION */
+  #scene-discussion { background:linear-gradient(135deg,#0f0c29,#302b63,#24243e); }
+  .disc-title { position:absolute; top:60px; left:50%; transform:translateX(-50%); font-family:'Press Start 2P',monospace; font-size:13px; color:var(--yellow); text-shadow:0 0 20px rgba(255,230,109,0.5); white-space:nowrap; }
+  .rooms-container { position:absolute; top:115px; left:50%; transform:translateX(-50%); width:90%; max-width:800px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+  .room-card { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:16px; cursor:pointer; transition:all 0.3s; position:relative; overflow:hidden; }
+  .room-card::before { content:''; position:absolute; inset:0; background:var(--room-color,rgba(255,107,107,0.1)); opacity:0; transition:opacity 0.3s; }
+  .room-card:hover { transform:translateY(-4px); border-color:rgba(255,255,255,0.25); }
+  .room-card:hover::before { opacity:1; }
+  .room-icon { font-size:32px; margin-bottom:10px; }
+  .room-name { font-family:'Press Start 2P',monospace; font-size:8px; color:white; margin-bottom:6px; line-height:1.6; }
+  .room-desc { font-size:11px; color:rgba(255,255,255,0.5); line-height:1.5; }
+  .room-badge { position:absolute; top:10px; right:10px; background:var(--accent); color:white; font-size:10px; font-weight:800; padding:2px 7px; border-radius:10px; }
+  .confusion-tags { margin-top:10px; display:flex; flex-wrap:wrap; gap:4px; }
+  .ctag { font-size:9px; padding:2px 7px; border-radius:10px; font-weight:700; }
+  .confused-summary-strip { position:absolute; bottom:20px; left:50%; transform:translateX(-50%); background:rgba(255,107,107,0.1); border:1px solid rgba(255,107,107,0.3); border-radius:12px; padding:10px 20px; color:rgba(255,255,255,0.7); font-size:12px; text-align:center; max-width:700px; width:90%; }
+  .confused-summary-strip strong { color:var(--accent); }
+
+  /* NOTEBOOK OVERLAY */
+  #notebook-overlay { position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.72); display:none; align-items:center; justify-content:center; backdrop-filter:blur(4px); flex-direction:column; gap:12px; }
+  #notebook-overlay.open { display:flex; }
+  #notebook { width:570px; max-height:74vh; background:var(--paper); border-radius:4px; box-shadow:0 20px 60px rgba(0,0,0,0.6); overflow:hidden; animation:notebookOpen 0.4s cubic-bezier(0.34,1.56,0.64,1); display:flex; flex-direction:column; }
+  @keyframes notebookOpen { from{transform:scale(0.8) rotate(-5deg);opacity:0} to{transform:scale(1) rotate(0deg);opacity:1} }
+  .nb-inner { display:flex; flex:1; overflow:hidden; }
+  .notebook-binding { width:40px; background:linear-gradient(180deg,#555,#333); flex-shrink:0; display:flex; flex-direction:column; align-items:center; padding:8px 0; gap:16px; }
+  .spiral { width:24px; height:24px; border-radius:50%; background:#888; border:3px solid #aaa; }
+  .notebook-content { flex:1; padding:20px; overflow-y:auto; background:repeating-linear-gradient(to bottom,transparent 0px,transparent 29px,#b8d4e8 29px,#b8d4e8 30px); background-size:100% 30px; }
+  .notebook-title { font-family:'VT323',monospace; font-size:24px; color:#333; margin-bottom:4px; padding-bottom:8px; border-bottom:2px solid #c00; text-align:center; }
+  .notebook-subtitle { font-size:11px; color:#888; text-align:center; margin-bottom:12px; }
+
+  /* Notebook toolbar */
+  .nb-toolbar { display:flex; gap:8px; margin-bottom:10px; align-items:center; }
+  .nb-tool-btn { padding:5px 12px; border-radius:8px; font-family:'Nunito',sans-serif; font-size:11px; font-weight:800; cursor:pointer; border:2px solid transparent; transition:all 0.2s; }
+  .nb-tool-btn.edit-toggle { background:rgba(255,107,107,0.1); color:var(--accent); border-color:rgba(255,107,107,0.25); }
+  .nb-tool-btn.edit-toggle.active { background:var(--accent); color:white; border-color:var(--accent); }
+
+  /* Notebook topic rows */
+  .topic-row { display:flex; align-items:center; gap:8px; padding:7px 6px; border-bottom:1px dashed #ccc; border-radius:4px; position:relative; transition:opacity 0.2s; }
+  .topic-row:not(.edit-mode-on) { cursor:pointer; }
+  .topic-row:not(.edit-mode-on):hover { background:rgba(255,107,107,0.05); }
+  .topic-checkbox { width:20px; height:20px; border:2px solid #bbb; border-radius:3px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:12px; transition:all 0.2s; }
+  .topic-row.marked .topic-checkbox { background:var(--accent); border-color:var(--accent); color:white; }
+  .topic-row.marked .topic-label-text { color:var(--accent); font-weight:700; }
+  .topic-label-text { font-size:14px; color:#444; font-weight:600; flex:1; }
+  .topic-label-input { flex:1; font-size:14px; color:#333; font-weight:700; border:1px solid #ddd; border-radius:4px; padding:2px 8px; font-family:'Nunito',sans-serif; outline:none; background:#fffaf0; }
+  .topic-label-input:focus { border-color:var(--accent); box-shadow:0 0 0 2px rgba(255,107,107,0.15); }
+  .confused-emoji { font-size:16px; opacity:0; transition:opacity 0.2s; pointer-events:none; }
+  .topic-row.marked .confused-emoji { opacity:1; }
+  .del-row-btn { width:24px; height:24px; border-radius:50%; background:rgba(255,107,107,0.1); border:1px solid rgba(255,107,107,0.3); color:var(--accent); font-size:12px; cursor:pointer; display:none; align-items:center; justify-content:center; flex-shrink:0; transition:all 0.2s; line-height:1; }
+  .del-row-btn:hover { background:var(--accent); color:white; }
+  .show-del .del-row-btn { display:flex; }
+
+  /* Add topic row */
+  .add-topic-row { display:flex; gap:8px; margin-top:12px; align-items:center; }
+  .add-topic-input { flex:1; border:2px dashed #ccc; border-radius:6px; padding:7px 10px; font-size:13px; font-family:'Nunito',sans-serif; outline:none; color:#333; background:#fffdf8; }
+  .add-topic-input:focus { border-color:var(--green); border-style:solid; }
+  .add-topic-confirm { padding:7px 14px; background:var(--green); border:none; border-radius:6px; color:white; font-weight:800; font-size:13px; cursor:pointer; font-family:'Nunito',sans-serif; }
+  .add-topic-confirm:hover { background:#4aaa50; }
+
+  .notebook-footer { padding:12px 16px; display:flex; gap:10px; justify-content:flex-end; border-top:2px solid #e8dfc8; background:#faf5e8; flex-shrink:0; }
+  .nb-btn { padding:8px 18px; border:none; border-radius:6px; font-family:'Nunito',sans-serif; font-size:13px; font-weight:700; cursor:pointer; transition:all 0.2s; }
+  .nb-btn.primary { background:var(--accent); color:white; }
+  .nb-btn.primary:hover { background:#e05555; }
+  .nb-btn.secondary { background:#eee; color:#555; }
+  .nb-btn.secondary:hover { background:#ddd; }
+
+  /* TIMETABLE EDITOR */
+  #tt-editor-overlay { position:fixed; inset:0; z-index:300; background:rgba(0,0,0,0.82); display:none; align-items:center; justify-content:center; backdrop-filter:blur(6px); }
+  #tt-editor-overlay.open { display:flex; }
+  #tt-editor { width:640px; max-height:85vh; background:#1e1e35; border-radius:16px; border:1px solid rgba(255,255,255,0.1); overflow:hidden; display:flex; flex-direction:column; animation:popIn 0.35s cubic-bezier(0.34,1.56,0.64,1); box-shadow:0 30px 80px rgba(0,0,0,0.7); }
+  @keyframes popIn { from{transform:scale(0.85);opacity:0} to{transform:scale(1);opacity:1} }
+  .te-header { padding:16px 20px; background:rgba(255,255,255,0.04); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; gap:10px; }
+  .te-header-title { font-family:'Press Start 2P',monospace; font-size:9px; color:white; flex:1; }
+  .te-body { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:10px; }
+  .te-footer { padding:12px 16px; border-top:1px solid rgba(255,255,255,0.08); display:flex; gap:10px; justify-content:flex-end; background:rgba(0,0,0,0.2); }
+  .te-card { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:14px 14px 14px 22px; position:relative; }
+  .te-color-strip { width:6px; position:absolute; top:0; left:0; bottom:0; border-radius:10px 0 0 10px; }
+  .te-card-row { display:flex; gap:8px; margin-bottom:8px; align-items:center; }
+  .te-label { font-size:11px; color:rgba(255,255,255,0.45); width:70px; flex-shrink:0; font-weight:700; }
+  .te-input { flex:1; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:6px; padding:6px 10px; color:white; font-family:'Nunito',sans-serif; font-size:13px; outline:none; min-width:0; }
+  .te-input:focus { border-color:var(--yellow); background:rgba(255,230,109,0.06); }
+  .te-topics-input { flex:1; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:6px; padding:6px 10px; color:rgba(255,255,255,0.8); font-family:'Nunito',sans-serif; font-size:12px; outline:none; min-width:0; }
+  .te-topics-input:focus { border-color:var(--blue); }
+  .te-del-btn { position:absolute; top:10px; right:10px; background:rgba(255,107,107,0.1); border:1px solid rgba(255,107,107,0.2); color:var(--accent); border-radius:6px; padding:4px 10px; font-size:11px; font-weight:800; cursor:pointer; font-family:'Nunito',sans-serif; transition:all 0.2s; }
+  .te-del-btn:hover { background:var(--accent); color:white; }
+  .te-add-btn { background:rgba(93,187,99,0.08); border:2px dashed rgba(93,187,99,0.35); border-radius:10px; padding:14px; text-align:center; color:#5DBB63; font-weight:800; font-size:13px; cursor:pointer; transition:all 0.2s; font-family:'Nunito',sans-serif; }
+  .te-add-btn:hover { background:rgba(93,187,99,0.18); border-color:var(--green); }
+  .te-btn { padding:8px 18px; border:none; border-radius:8px; font-family:'Nunito',sans-serif; font-size:13px; font-weight:700; cursor:pointer; transition:all 0.2s; }
+  .te-btn.primary { background:var(--yellow); color:#000; }
+  .te-btn.primary:hover { background:#f5d93a; }
+  .te-btn.secondary { background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.6); }
+  .te-btn.secondary:hover { background:rgba(255,255,255,0.14); color:white; }
+
+  /* CHAT */
+  #chat-panel { position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.75); display:none; align-items:center; justify-content:center; backdrop-filter:blur(6px); }
+  #chat-panel.open { display:flex; }
+  #chat-window { width:480px; height:560px; background:#1a1a2e; border-radius:16px; border:1px solid rgba(255,255,255,0.1); display:flex; flex-direction:column; overflow:hidden; animation:popIn 0.35s cubic-bezier(0.34,1.56,0.64,1); box-shadow:0 30px 80px rgba(0,0,0,0.7); }
+  .chat-header { padding:14px 18px; background:rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; gap:10px; }
+  .chat-header-title { font-family:'Press Start 2P',monospace; font-size:9px; color:white; flex:1; }
+  .chat-header-tag { font-size:10px; padding:3px 10px; background:rgba(255,107,107,0.2); color:var(--accent); border-radius:10px; font-weight:700; border:1px solid rgba(255,107,107,0.3); }
+  .close-btn { background:none; border:none; color:rgba(255,255,255,0.5); font-size:20px; cursor:pointer; padding:0 4px; transition:color 0.2s; }
+  .close-btn:hover { color:white; }
+  .chat-messages { flex:1; padding:16px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; }
+  .msg { display:flex; gap:8px; align-items:flex-end; animation:msgIn 0.3s ease; }
+  @keyframes msgIn { from{transform:translateY(10px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .msg.me { flex-direction:row-reverse; }
+  .msg-avatar { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; background:rgba(255,255,255,0.1); }
+  .msg-bubble { max-width:75%; padding:8px 12px; border-radius:14px; font-size:13px; color:white; line-height:1.5; background:rgba(255,255,255,0.08); }
+  .msg.me .msg-bubble { background:linear-gradient(135deg,#4ECDC4,#45B7AA); border-radius:14px 14px 4px 14px; }
+  .msg:not(.me) .msg-bubble { border-radius:14px 14px 14px 4px; }
+  .msg-name { font-size:10px; color:rgba(255,255,255,0.4); margin-bottom:2px; }
+  .ref-tag { font-size:10px; padding:2px 8px; background:rgba(168,85,247,0.2); color:#d8aaff; border-radius:8px; border:1px solid rgba(168,85,247,0.3); margin-top:4px; display:inline-block; }
+  .chat-input-row { padding:12px 14px; border-top:1px solid rgba(255,255,255,0.08); display:flex; gap:8px; align-items:center; background:rgba(0,0,0,0.2); }
+  .chat-input { flex:1; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.1); border-radius:20px; padding:8px 14px; color:white; font-family:'Nunito',sans-serif; font-size:13px; outline:none; }
+  .chat-input:focus { border-color:var(--blue); }
+  .chat-input::placeholder { color:rgba(255,255,255,0.3); }
+  .send-btn { width:36px; height:36px; border-radius:50%; background:var(--blue); border:none; color:white; font-size:16px; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center; }
+  .send-btn:hover { background:#3dbdb5; transform:scale(1.1); }
+
+  /* MISC */
+  #confusion-badge { position:fixed; top:55px; right:20px; z-index:90; background:var(--accent); color:white; border-radius:12px; padding:8px 14px; font-size:12px; font-weight:800; display:none; box-shadow:0 4px 15px rgba(255,107,107,0.4); cursor:pointer; }
+  #back-btn { position:fixed; top:58px; left:20px; z-index:90; background:rgba(255,255,255,0.1); color:rgba(255,255,255,0.7); border:1px solid rgba(255,255,255,0.2); border-radius:8px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer; display:none; font-family:'Nunito',sans-serif; transition:all 0.2s; }
+  #back-btn:hover { background:rgba(255,255,255,0.2); color:white; }
+  #transition-overlay { position:fixed; inset:0; z-index:1000; background:#0f0f1a; pointer-events:none; opacity:0; transition:opacity 0.4s; }
+  #transition-overlay.fade-in { opacity:1; pointer-events:all; }
+
+  /* Pixel avatars */
+  .avatar-sprite { width:40px; height:70px; position:relative; }
+  .av-head { width:26px; height:26px; border-radius:50%; background:#FFCBA4; border:2px solid #D4956A; position:absolute; top:0; left:7px; }
+  .av-hair { width:28px; height:12px; background:#4A3728; border-radius:14px 14px 0 0; position:absolute; top:-2px; left:6px; }
+  .av-body { width:30px; height:26px; border-radius:4px; position:absolute; top:24px; left:5px; }
+  .av-legs { position:absolute; top:48px; left:8px; display:flex; gap:6px; }
+  .av-leg { width:9px; height:20px; background:#334466; border-radius:3px; }
+  .av-shoes { position:absolute; top:64px; left:6px; display:flex; gap:8px; }
+  .av-shoe { width:12px; height:7px; background:#222; border-radius:3px 3px 0 0; }
+  .mini-avatar { width:24px; height:40px; position:relative; display:inline-block; }
+  .ma-head { width:16px; height:16px; border-radius:50%; background:#FFCBA4; border:1px solid #D4956A; position:absolute; top:0; left:4px; }
+  .ma-body { width:18px; height:16px; border-radius:3px; position:absolute; top:14px; left:3px; }
+  .ma-legs { position:absolute; top:28px; left:5px; display:flex; gap:4px; }
+  .ma-leg { width:5px; height:12px; background:#334466; border-radius:2px; }
+  @keyframes slideFromLeft { from{transform:translateX(-100px);opacity:0} to{transform:translateX(0);opacity:1} }
+  .entrance { animation:slideFromLeft 0.6s ease; }
+  .particle { position:absolute; width:4px; height:4px; border-radius:50%; animation:float linear infinite; pointer-events:none; }
+  @keyframes float { from{transform:translateY(100vh);opacity:0.6} to{transform:translateY(-100px);opacity:0} }
+</style>
+</head>
+<body>
+
+<div id="nav">
+  <div class="logo">ClassQuest</div>
+  <div class="steps">
+    <div class="step-pill active" id="pill-1">① Timetable</div>
+    <div class="step-pill" id="pill-2">② Classroom</div>
+    <div class="step-pill" id="pill-3">③ Discussion</div>
+  </div>
+</div>
+
+<button id="back-btn" onclick="goBack()">← Back</button>
+<div id="confusion-badge" onclick="goToDiscussion()">😵 <span id="badge-count">0</span> confused · Discuss →</div>
+<div id="transition-overlay"></div>
+
+<!-- ══ SCENE 1 – LOBBY ══ -->
+<div class="scene visible" id="scene-lobby">
+  <div class="lobby-wall"></div>
+  <div class="ceiling-light" style="left:20%"></div>
+  <div class="ceiling-light" style="left:50%;transform:translateX(-50%)"></div>
+  <div class="ceiling-light" style="right:20%"></div>
+  <div id="noticeboard">
+    <div class="board-header">
+      📋 TODAY'S LECTURE TIMETABLE
+      <button class="edit-tt-btn" onclick="openTimetableEditor(event)">✏️ Edit Timetable</button>
+    </div>
+    <div class="board-inner" id="board-inner"></div>
+  </div>
+  <div class="lobby-floor"></div>
+  <div id="avatar-lobby" style="left:50%">
+    <div class="speech-bubble" id="lobby-bubble">Pick a lecture! 📚</div>
+    <div class="avatar-sprite">
+      <div class="av-hair"></div><div class="av-head"></div>
+      <div class="av-body" style="background:#3B82F6"></div>
+      <div class="av-legs"><div class="av-leg"></div><div class="av-leg"></div></div>
+      <div class="av-shoes"><div class="av-shoe"></div><div class="av-shoe"></div></div>
+    </div>
+  </div>
+  <div class="lobby-instruction">👆 Click a lecture to enter · ✏️ Edit Timetable to customise your schedule</div>
+</div>
+
+<!-- ══ SCENE 2 – CLASSROOM ══ -->
+<div class="scene" id="scene-classroom">
+  <div class="class-wall"></div>
+  <div id="chalkboard">
+    <div class="board-title" id="board-subject">SUBJECT</div>
+    <div class="chalk-topics" id="chalk-topics-list"></div>
+  </div>
+  <div class="class-floor"></div>
+  <div class="desk-row" id="desk-row"></div>
+  <button id="open-notebook-btn" onclick="openNotebook()">📓 Open My Notebook</button>
+  <div class="lobby-instruction" style="bottom:5px">Click chalkboard topics to flag confusion · Open notebook to review &amp; mark</div>
+</div>
+
+<!-- ══ SCENE 3 – DISCUSSION ══ -->
+<div class="scene" id="scene-discussion">
+  <div id="particles-container"></div>
+  <div class="disc-title">💬 DISCUSSION HUB</div>
+  <div class="rooms-container" id="rooms-container"></div>
+  <div class="confused-summary-strip" id="confused-strip"></div>
+</div>
+
+<!-- ══ NOTEBOOK OVERLAY ══ -->
+<div id="notebook-overlay">
+  <div id="notebook">
+    <div class="nb-inner">
+      <div class="notebook-binding">
+        <div class="spiral"></div><div class="spiral"></div><div class="spiral"></div>
+        <div class="spiral"></div><div class="spiral"></div><div class="spiral"></div>
+        <div class="spiral"></div><div class="spiral"></div>
+      </div>
+      <div class="notebook-content">
+        <div class="notebook-title">📓 My Confusion Notes</div>
+        <div class="notebook-subtitle" id="nb-subtitle">Tap any topic you didn't understand</div>
+        <div class="nb-toolbar">
+          <button class="nb-tool-btn edit-toggle" id="nb-edit-toggle" onclick="toggleNbEdit()">✏️ Edit Topics</button>
+        </div>
+        <div id="notebook-topics"></div>
+        <div class="add-topic-row" id="add-topic-row" style="display:none">
+          <input class="add-topic-input" id="add-topic-input" placeholder="Add a new topic…" onkeydown="if(event.key==='Enter')confirmAddTopic()" />
+          <button class="add-topic-confirm" onclick="confirmAddTopic()">+ Add</button>
+        </div>
+      </div>
+    </div>
+    <div class="notebook-footer">
+      <button class="nb-btn secondary" onclick="closeNotebook()">Close</button>
+      <button class="nb-btn primary" onclick="saveAndDiscuss()">Save &amp; Go to Discussion →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TIMETABLE EDITOR ══ -->
+<div id="tt-editor-overlay">
+  <div id="tt-editor">
+    <div class="te-header">
+      <span style="font-size:18px">📋</span>
+      <div class="te-header-title">EDIT TIMETABLE</div>
+      <button class="close-btn" onclick="closeTimetableEditor()">×</button>
+    </div>
+    <div class="te-body" id="te-body"></div>
+    <div class="te-footer">
+      <button class="te-btn secondary" onclick="closeTimetableEditor()">Cancel</button>
+      <button class="te-btn primary" onclick="saveTimetable()">💾 Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CHAT PANEL ══ -->
+<div id="chat-panel">
+  <div id="chat-window">
+    <div class="chat-header">
+      <div style="font-size:20px" id="chat-room-icon">👥</div>
+      <div class="chat-header-title" id="chat-room-title">STUDY GROUP</div>
+      <div class="chat-header-tag" id="chat-ref-tag">📌 Topic</div>
+      <button class="close-btn" onclick="closeChat()">×</button>
+    </div>
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="chat-input-row">
+      <input class="chat-input" id="chat-input" placeholder="Ask about a topic… press Enter to send" onkeydown="if(event.key==='Enter')sendMessage()" />
+      <button class="send-btn" onclick="sendMessage()">➤</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── STATE ───
+let currentSubject='', currentTopics=[], markedTopics=[], confusedOnChalkboard=[];
+let currentScene='lobby', nbEditMode=false, editBuffer=[];
+const CARD_COLORS=['#FF6B6B','#4ECDC4','#A855F7','#5DBB63','#FF9500','#FF3EBD'];
+const OTHERS=['Arjun 🎮','Priya 📱','Rohan 🎵','Sneha ✏️','Karan 🚀'];
+const AVCOLS=['#FF6B6B','#4ECDC4','#A855F7','#5DBB63','#FFB347'];
+
+let timetable=[
+  {subject:'Data Structures', room:'Room 101 · Prof. Sharma', topics:['Arrays & Pointers','Linked Lists','Stack & Queue','Binary Trees','Graph Traversal']},
+  {subject:'Algorithms',      room:'Room 203 · Prof. Mehta',  topics:['Time Complexity','Sorting Methods','Dynamic Programming','Greedy Algorithms','Backtracking']},
+  {subject:'OS Concepts',     room:'Room 105 · Prof. Rao',    topics:['Process Scheduling','Memory Paging','Deadlocks','Semaphores','Virtual Memory']},
+  {subject:'DBMS',            room:'Room 301 · Prof. Gupta',  topics:['SQL Joins','Normalization','Transactions','Indexing','Query Optimization']},
+];
+
+// ─── NOTICEBOARD ───
+function renderNoticeboard(){
+  const inner=document.getElementById('board-inner');
+  inner.innerHTML='';
+  timetable.forEach((lec,i)=>{
+    const card=document.createElement('div');
+    card.className='lecture-card';
+    card.style.borderLeftColor=CARD_COLORS[i%CARD_COLORS.length];
+    const chips=lec.topics.slice(0,3).map(t=>`<span class="topic-chip">${t.split(' ')[0]}</span>`).join('');
+    card.innerHTML=`
+      <div class="card-pin">📌</div>
+      <div class="lc-subject">${lec.subject.toUpperCase()}</div>
+      <div class="lc-room">${lec.room}</div>
+      <div class="lc-topics">${chips}</div>
+      <div class="click-hint">Click to attend →</div>`;
+    card.onclick=()=>enterClass(lec.subject,[...lec.topics],CARD_COLORS[i%CARD_COLORS.length]);
+    inner.appendChild(card);
+  });
+}
+
+// ─── SCENE MANAGEMENT ───
+function transitionTo(fn){
+  const o=document.getElementById('transition-overlay');
+  o.classList.add('fade-in');
+  setTimeout(()=>{fn();o.classList.remove('fade-in');},400);
+}
+function showScene(name){
+  document.querySelectorAll('.scene').forEach(s=>s.classList.remove('visible'));
+  document.getElementById('scene-'+name).classList.add('visible');
+  currentScene=name;
+  const map={lobby:1,classroom:2,discussion:3};
+  const active=map[name];
+  ['pill-1','pill-2','pill-3'].forEach((id,i)=>{
+    const el=document.getElementById(id);
+    el.classList.remove('active','done');
+    if(i+1<active)el.classList.add('done');
+    if(i+1===active)el.classList.add('active');
+  });
+  document.getElementById('back-btn').style.display=name==='lobby'?'none':'block';
+}
+
+// ─── ENTER CLASS ───
+function enterClass(subject,topics,color){
+  currentSubject=subject; currentTopics=[...topics]; markedTopics=[]; nbEditMode=false;
+  const av=document.getElementById('avatar-lobby');
+  document.getElementById('lobby-bubble').textContent=`Heading to ${subject}! 🚀`;
+  av.style.left='82%';
+  setTimeout(()=>{
+    transitionTo(()=>{setupClassroom(subject,topics,color);showScene('classroom');});
+  },800);
+}
+
+function setupClassroom(subject,topics,color){
+  document.getElementById('board-subject').textContent=subject.toUpperCase();
+  const tl=document.getElementById('chalk-topics-list');
+  tl.innerHTML=''; confusedOnChalkboard=[];
+  topics.forEach(t=>{
+    const div=document.createElement('div');
+    div.className='chalk-line';
+    div.innerHTML=`<div class="confused-dot"></div>${t}`;
+    div.onclick=()=>{
+      div.classList.toggle('confused');
+      if(div.classList.contains('confused')){if(!confusedOnChalkboard.includes(t))confusedOnChalkboard.push(t);}
+      else confusedOnChalkboard=confusedOnChalkboard.filter(x=>x!==t);
+    };
+    tl.appendChild(div);
+  });
+  const deskRow=document.getElementById('desk-row');
+  deskRow.innerHTML='';
+  [...OTHERS.slice(0,4),'ME'].sort(()=>Math.random()-0.5).forEach((name,i)=>{
+    const isMe=name==='ME';
+    const desk=document.createElement('div');
+    desk.className='desk entrance'+(isMe?' my-desk':'');
+    desk.style.animationDelay=(i*0.08)+'s';
+    const avDiv=document.createElement('div');
+    avDiv.className='desk-avatar';
+    if(isMe){
+      avDiv.innerHTML=`<div class="avatar-sprite" style="transform:scale(0.7);transform-origin:bottom center"><div class="av-hair"></div><div class="av-head"></div><div class="av-body" style="background:#3B82F6"></div><div class="av-legs"><div class="av-leg"></div><div class="av-leg"></div></div><div class="av-shoes"><div class="av-shoe"></div><div class="av-shoe"></div></div></div><div style="font-size:10px;color:${color};font-weight:800;text-align:center;margin-top:2px">YOU</div>`;
+    }else{
+      const col=AVCOLS[i%AVCOLS.length];
+      avDiv.innerHTML=`<div class="mini-avatar"><div class="ma-head"></div><div class="ma-body" style="background:${col}"></div><div class="ma-legs"><div class="ma-leg"></div><div class="ma-leg"></div></div></div><div style="font-size:9px;color:rgba(255,255,255,0.5);text-align:center">${name.split(' ')[0]}</div>`;
+    }
+    desk.appendChild(avDiv); deskRow.appendChild(desk);
+  });
+  buildNotebook(topics);
+}
+
+// ─── NOTEBOOK ───
+function buildNotebook(topics){
+  document.getElementById('nb-subtitle').textContent=`${currentSubject} – tap what confused you`;
+  const container=document.getElementById('notebook-topics');
+  container.innerHTML='';
+  nbEditMode=false;
+  document.getElementById('nb-edit-toggle').classList.remove('active');
+  document.getElementById('nb-edit-toggle').textContent='✏️ Edit Topics';
+  document.getElementById('add-topic-row').style.display='none';
+  topics.forEach(t=>appendNotebookRow(t,container,false));
+}
+
+function appendNotebookRow(topic,container,inEditMode){
+  const row=document.createElement('div');
+  row.className='topic-row'+(inEditMode?' edit-mode-on show-del':'');
+  row.dataset.topic=topic;
+  if(inEditMode){
+    row.innerHTML=`
+      <div class="topic-checkbox" style="opacity:0.3;pointer-events:none"></div>
+      <input class="topic-label-input" value="${topic}" />
+      <div class="confused-emoji">😵</div>
+      <button class="del-row-btn" onclick="deleteRow(this)">✕</button>`;
+    row.querySelector('.topic-label-input').addEventListener('change',e=>{
+      const old=row.dataset.topic;
+      row.dataset.topic=e.target.value;
+      const idx=markedTopics.indexOf(old);
+      if(idx>-1)markedTopics[idx]=e.target.value;
+    });
+  }else{
+    row.innerHTML=`
+      <div class="topic-checkbox"></div>
+      <div class="topic-label-text">${topic}</div>
+      <div class="confused-emoji">😵</div>
+      <button class="del-row-btn" onclick="deleteRow(this)">✕</button>`;
+    const clickMark=()=>toggleMark(row);
+    row.querySelector('.topic-checkbox').addEventListener('click',clickMark);
+    row.querySelector('.topic-label-text').addEventListener('click',clickMark);
+    row.querySelector('.confused-emoji').addEventListener('click',clickMark);
+  }
+  container.appendChild(row);
+}
+
+function toggleMark(row){
+  const topic=row.dataset.topic;
+  row.classList.toggle('marked');
+  const cb=row.querySelector('.topic-checkbox');
+  if(row.classList.contains('marked')){cb.textContent='✓';if(!markedTopics.includes(topic))markedTopics.push(topic);}
+  else{cb.textContent='';markedTopics=markedTopics.filter(t=>t!==topic);}
+  updateBadge();
+}
+
+function deleteRow(btn){
+  const row=btn.closest('.topic-row');
+  const topic=row.dataset.topic;
+  markedTopics=markedTopics.filter(t=>t!==topic);
+  currentTopics=currentTopics.filter(t=>t!==topic);
+  row.style.opacity='0';row.style.transform='translateX(20px)';row.style.transition='all 0.2s';
+  setTimeout(()=>row.remove(),200);
+  updateBadge();
+}
+
+function toggleNbEdit(){
+  nbEditMode=!nbEditMode;
+  const btn=document.getElementById('nb-edit-toggle');
+  btn.classList.toggle('active',nbEditMode);
+  btn.textContent=nbEditMode?'✅ Done Editing':'✏️ Edit Topics';
+  document.getElementById('add-topic-row').style.display=nbEditMode?'flex':'none';
+  document.getElementById('add-topic-input').value='';
+
+  const container=document.getElementById('notebook-topics');
+  const rows=[...container.querySelectorAll('.topic-row')];
+
+  if(nbEditMode){
+    // Convert each row to edit mode
+    rows.forEach(row=>{
+      const topic=row.dataset.topic;
+      const isMarked=row.classList.contains('marked');
+      // Replace entire row content
+      row.innerHTML=`
+        <div class="topic-checkbox" style="opacity:0.3;pointer-events:none">${isMarked?'✓':''}</div>
+        <input class="topic-label-input" value="${topic}" />
+        <div class="confused-emoji" style="opacity:${isMarked?1:0}">😵</div>
+        <button class="del-row-btn" onclick="deleteRow(this)">✕</button>`;
+      row.classList.add('edit-mode-on','show-del');
+      if(isMarked)row.classList.add('marked');
+      row.querySelector('.topic-label-input').addEventListener('change',e=>{
+        const old=row.dataset.topic;
+        row.dataset.topic=e.target.value;
+        const idx=markedTopics.indexOf(old);
+        if(idx>-1)markedTopics[idx]=e.target.value;
+      });
+    });
+  }else{
+    // Convert back to view mode
+    rows.forEach(row=>{
+      const topic=row.querySelector('.topic-label-input')?.value||row.dataset.topic;
+      row.dataset.topic=topic;
+      const isMarked=row.classList.contains('marked');
+      row.innerHTML=`
+        <div class="topic-checkbox">${isMarked?'✓':''}</div>
+        <div class="topic-label-text">${topic}</div>
+        <div class="confused-emoji">😵</div>
+        <button class="del-row-btn" onclick="deleteRow(this)">✕</button>`;
+      row.classList.remove('edit-mode-on','show-del');
+      const clickMark=()=>toggleMark(row);
+      row.querySelector('.topic-checkbox').addEventListener('click',clickMark);
+      row.querySelector('.topic-label-text').addEventListener('click',clickMark);
+      row.querySelector('.confused-emoji').addEventListener('click',clickMark);
+    });
+  }
+}
+
+function confirmAddTopic(){
+  const input=document.getElementById('add-topic-input');
+  const val=input.value.trim();
+  if(!val)return;
+  const container=document.getElementById('notebook-topics');
+  // Add as edit-mode row
+  const row=document.createElement('div');
+  row.className='topic-row edit-mode-on show-del';
+  row.dataset.topic=val;
+  row.innerHTML=`
+    <div class="topic-checkbox" style="opacity:0.3;pointer-events:none"></div>
+    <input class="topic-label-input" value="${val}" />
+    <div class="confused-emoji" style="opacity:0">😵</div>
+    <button class="del-row-btn" onclick="deleteRow(this)">✕</button>`;
+  row.querySelector('.topic-label-input').addEventListener('change',e=>{
+    const old=row.dataset.topic; row.dataset.topic=e.target.value;
+    const idx=markedTopics.indexOf(old); if(idx>-1)markedTopics[idx]=e.target.value;
+  });
+  container.appendChild(row);
+  currentTopics.push(val);
+  input.value=''; input.focus();
+}
+
+function openNotebook(){ document.getElementById('notebook-overlay').classList.add('open'); }
+function closeNotebook(){
+  if(nbEditMode)toggleNbEdit();
+  document.getElementById('notebook-overlay').classList.remove('open');
+}
+function updateBadge(){
+  const badge=document.getElementById('confusion-badge');
+  document.getElementById('badge-count').textContent=markedTopics.length;
+  badge.style.display=(markedTopics.length>0&&currentScene==='classroom')?'block':'none';
+}
+function saveAndDiscuss(){
+  if(nbEditMode)toggleNbEdit();
+  closeNotebook();
+  confusedOnChalkboard.forEach(t=>{if(!markedTopics.includes(t))markedTopics.push(t);});
+  updateBadge();
+  setTimeout(()=>transitionTo(()=>{setupDiscussion();showScene('discussion');spawnParticles();}),200);
+}
+
+// ─── TIMETABLE EDITOR ───
+function openTimetableEditor(e){
+  e.stopPropagation();
+  editBuffer=timetable.map(l=>({...l,topics:[...l.topics]}));
+  renderTimetableEditor();
+  document.getElementById('tt-editor-overlay').classList.add('open');
+}
+function closeTimetableEditor(){ document.getElementById('tt-editor-overlay').classList.remove('open'); }
+
+function renderTimetableEditor(){
+  const body=document.getElementById('te-body');
+  body.innerHTML='';
+  editBuffer.forEach((lec,i)=>{
+    const card=document.createElement('div');
+    card.className='te-card';
+    card.innerHTML=`
+      <div class="te-color-strip" style="background:${CARD_COLORS[i%CARD_COLORS.length]}"></div>
+      <button class="te-del-btn" onclick="removeTeCard(${i})">✕ Remove</button>
+      <div class="te-card-row">
+        <span class="te-label">Subject</span>
+        <input class="te-input" data-field="subject" value="${lec.subject}" placeholder="Subject name" />
+      </div>
+      <div class="te-card-row">
+        <span class="te-label">Room/Prof</span>
+        <input class="te-input" data-field="room" value="${lec.room}" placeholder="Room 101 · Prof. Name" />
+      </div>
+      <div class="te-card-row">
+        <span class="te-label">Topics</span>
+        <input class="te-topics-input" data-field="topics" value="${lec.topics.join(', ')}" placeholder="Topic A, Topic B, Topic C…" />
+      </div>`;
+    card.querySelectorAll('[data-field]').forEach(inp=>{
+      inp.addEventListener('input',()=>{
+        if(inp.dataset.field==='topics') editBuffer[i].topics=inp.value.split(',').map(t=>t.trim()).filter(Boolean);
+        else editBuffer[i][inp.dataset.field]=inp.value;
+      });
+    });
+    body.appendChild(card);
+  });
+  const addBtn=document.createElement('div');
+  addBtn.className='te-add-btn';
+  addBtn.textContent='＋ Add New Lecture';
+  addBtn.onclick=addTeCard;
+  body.appendChild(addBtn);
+}
+
+function removeTeCard(idx){ editBuffer.splice(idx,1); renderTimetableEditor(); }
+function addTeCard(){
+  editBuffer.push({subject:'',room:'',topics:[]});
+  renderTimetableEditor();
+  document.getElementById('te-body').scrollTop=99999;
+}
+function saveTimetable(){
+  timetable=editBuffer.filter(l=>l.subject.trim()!=='');
+  closeTimetableEditor(); renderNoticeboard();
+  const nb=document.getElementById('noticeboard');
+  nb.style.outline='3px solid var(--yellow)'; nb.style.outlineOffset='4px';
+  setTimeout(()=>{nb.style.outline='none';},800);
+}
+
+// ─── DISCUSSION ───
+function goToDiscussion(){
+  confusedOnChalkboard.forEach(t=>{if(!markedTopics.includes(t))markedTopics.push(t);});
+  transitionTo(()=>{setupDiscussion();showScene('discussion');spawnParticles();});
+}
+function setupDiscussion(){
+  document.getElementById('confusion-badge').style.display='none';
+  const container=document.getElementById('rooms-container'); container.innerHTML='';
+  const rooms=[
+    {icon:'👥',name:'GROUP STUDY',desc:'Discuss confusing topics with your entire class',color:'rgba(78,205,196,0.15)',badge:'12 online',tags:markedTopics.slice(0,2)},
+    {icon:'🔒',name:'PRIVATE MSG',desc:'Ask a classmate directly in a private chat',color:'rgba(168,85,247,0.15)',badge:null,tags:[]},
+    {icon:'🤖',name:'AI TUTOR',desc:'Get instant explanations on any confused topic',color:'rgba(255,230,109,0.15)',badge:'Always on',tags:markedTopics},
+  ];
+  rooms.forEach(r=>{
+    const card=document.createElement('div');
+    card.className='room-card'; card.style.setProperty('--room-color',r.color); card.onclick=()=>openChat(r);
+    const tags=r.tags.map(t=>`<span class="ctag" style="background:rgba(255,107,107,0.15);color:#ff9999;border:1px solid rgba(255,107,107,0.2)">#${t.split(' ')[0]}</span>`).join('');
+    card.innerHTML=`<div class="room-icon">${r.icon}</div>${r.badge?`<div class="room-badge">${r.badge}</div>`:''}<div class="room-name">${r.name}</div><div class="room-desc">${r.desc}</div>${tags?`<div class="confusion-tags">${tags}</div>`:''}`;
+    container.appendChild(card);
+  });
+  const strip=document.getElementById('confused-strip');
+  strip.innerHTML=markedTopics.length>0
+    ?`😵 You marked <strong>${markedTopics.length} topic(s)</strong> as confusing in <strong>${currentSubject}</strong>: ${markedTopics.map(t=>`<em>${t}</em>`).join(', ')} · Pick a room!`
+    :`✅ No confused topics from <strong>${currentSubject}</strong>. You can still join discussions below.`;
+}
+
+// ─── CHAT ───
+function openChat(room){
+  document.getElementById('chat-room-icon').textContent=room.icon;
+  document.getElementById('chat-room-title').textContent=room.name;
+  const ref=markedTopics.length>0?markedTopics[0]:currentSubject;
+  document.getElementById('chat-ref-tag').textContent='📌 '+ref;
+  const msgs=document.getElementById('chat-messages'); msgs.innerHTML='';
+  [{name:OTHERS[0],text:`Anyone else lost on ${ref}? 😅`,me:false},
+   {name:OTHERS[1],text:`Same! The explanation went too fast.`,me:false},
+   {name:null,text:`I marked it too. Let's break it down together!`,me:true},
+   {name:OTHERS[2],text:`Found a great resource – sharing now!`,me:false}]
+   .forEach((m,i)=>setTimeout(()=>addMessage(m.name,m.text,m.me,ref,i===0),i*260));
+  document.getElementById('chat-panel').classList.add('open');
+}
+function addMessage(name,text,isMe,ref,showRef){
+  const msgs=document.getElementById('chat-messages');
+  const msg=document.createElement('div');
+  msg.className='msg'+(isMe?' me':'');
+  const av=isMe?'🧑':(name?name.split(' ')[1]||'👤':'🧑');
+  msg.innerHTML=`<div class="msg-avatar">${av}</div><div>${!isMe&&name?`<div class="msg-name">${name.split(' ')[0]}</div>`:''}<div class="msg-bubble">${text}${showRef?`<div class="ref-tag">📌 Ref: ${ref}</div>`:''}</div></div>`;
+  msgs.appendChild(msg); msgs.scrollTop=msgs.scrollHeight;
+}
+function closeChat(){ document.getElementById('chat-panel').classList.remove('open'); }
+function sendMessage(){
+  const input=document.getElementById('chat-input'); const text=input.value.trim(); if(!text)return;
+  const ref=markedTopics.length>0?markedTopics[0]:currentSubject;
+  addMessage(null,text,true,ref,false); input.value='';
+  const replies=[`Good question on ${ref}! It's really about how the data flows internally.`,`Same doubt 🤔 Group study might help!`,`I found a video on ${ref} that clicked for me.`,`Prof's slide 42 might cover this!`];
+  setTimeout(()=>addMessage(OTHERS[Math.floor(Math.random()*OTHERS.length)],replies[Math.floor(Math.random()*replies.length)],false,ref,false),900+Math.random()*500);
+}
+
+// ─── BACK ───
+function goBack(){
+  closeNotebook(); closeChat();
+  transitionTo(()=>{
+    showScene('lobby');
+    const av=document.getElementById('avatar-lobby');
+    av.style.transition='none'; av.style.left='50%';
+    setTimeout(()=>{av.style.transition='left 0.8s ease';},50);
+    document.getElementById('lobby-bubble').textContent='Pick a lecture! 📚';
+    document.getElementById('confusion-badge').style.display='none';
+  });
+}
+
+function spawnParticles(){
+  const c=document.getElementById('particles-container'); c.innerHTML='';
+  const cols=['#FF6B6B','#4ECDC4','#FFE66D','#A855F7','#5DBB63'];
+  for(let i=0;i<20;i++){
+    const p=document.createElement('div'); p.className='particle';
+    p.style.cssText=`left:${Math.random()*100}%;width:${2+Math.random()*4}px;height:${2+Math.random()*4}px;background:${cols[i%cols.length]};animation-duration:${4+Math.random()*6}s;animation-delay:${Math.random()*4}s;opacity:0.4;`;
+    c.appendChild(p);
+  }
+}
+
+renderNoticeboard();
+</script>
+</body>
+</html>

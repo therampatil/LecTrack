@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LecTrack – Lecture Confusion Tracker</title>
+    <!-- Redirect unauthenticated users to signup -->
+    <script>
+      if (!sessionStorage.getItem("lt_logged_in")) {
+        window.location.replace("signup.html");
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- ── TOP NAV ── -->
+    <nav id="nav">
+      <div class="nav-logo">
+        <span class="logo-text">LecTrack</span>
+      </div>
+      <div class="nav-steps" id="nav-steps">
+        <div class="step-item active" data-step="1">
+          <div class="step-dot">1</div>
+          <span class="step-label">Timetable</span>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step-item" data-step="2">
+          <div class="step-dot">2</div>
+          <span class="step-label">Classroom</span>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step-item" data-step="3">
+          <div class="step-dot">3</div>
+          <span class="step-label">Discussion</span>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <button id="back-btn" class="btn-ghost" onclick="goBack()">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+          Back
+        </button>
+        <div id="confusion-badge" onclick="goToDiscussion()">
+          <span class="badge-icon">😵</span>
+          <span id="badge-count">0</span> confused
+          <span class="badge-arrow">→</span>
+        </div>
+        <a
+          href="profile.html"
+          class="nav-profile-btn"
+          title="My Profile"
+          aria-label="My Profile"
+        >
+          <div class="nav-avatar">AT</div>
+        </a>
+      </div>
+    </nav>
+
+    <!-- ── TRANSITION OVERLAY ── -->
+    <div id="transition-overlay"></div>
+
+    <!-- ════════════════════════════════
+       SCENE 1 – LOBBY / NOTICEBOARD
+       ════════════════════════════════ -->
+    <section class="scene visible" id="scene-lobby">
+      <div class="lobby-bg">
+        <div class="dot-bg"></div>
+        <div class="bg-blob blob-1"></div>
+        <div class="bg-blob blob-2"></div>
+        <div class="bg-blob blob-3"></div>
+      </div>
+      <div class="lobby-center">
+        <div class="lobby-header">
+          <h1 class="lobby-title">Today's <span class="hl">Lectures</span></h1>
+          <p class="lobby-sub">Select a lecture to enter the classroom</p>
+        </div>
+        <div class="noticeboard-card">
+          <div class="noticeboard-top">
+            <div class="noticeboard-meta">
+              <span class="nb-date" id="nb-date"></span>
+              <span class="nb-dot"></span>
+              <span class="nb-count" id="nb-count">4 lectures</span>
+            </div>
+            <button
+              class="btn-outline-sm"
+              id="edit-tt-btn"
+              onclick="openTimetableEditor()"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+                />
+                <path
+                  d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
+                />
+              </svg>
+              Edit Timetable
+            </button>
+          </div>
+          <div class="lecture-grid" id="lecture-grid"></div>
+        </div>
+        <p class="lobby-hint">
+          Click any lecture card to attend · Edit timetable to customise
+        </p>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════
+       SCENE 2 – CLASSROOM
+       ════════════════════════════════ -->
+    <section class="scene" id="scene-classroom">
+      <div class="classroom-bg">
+        <div class="dot-bg"></div>
+        <div class="bg-blob blob-4"></div>
+        <div class="bg-blob blob-5"></div>
+      </div>
+      <div class="classroom-layout">
+        <!-- Chalkboard Panel -->
+        <div class="chalkboard-panel">
+          <div class="chalkboard-header">
+            <div class="chalkboard-left">
+              <span class="subject-badge" id="subject-badge-icon">📘</span>
+              <div>
+                <div class="chalk-subject" id="board-subject">SUBJECT</div>
+                <div class="chalk-room" id="board-room">Room · Professor</div>
+              </div>
+            </div>
+            <div class="chalkboard-right">
+              <span class="live-indicator"
+                ><span class="live-dot"></span>LIVE</span
+              >
+            </div>
+          </div>
+          <div class="chalkboard-body">
+            <p class="chalk-instruction">Tap a topic to flag confusion</p>
+            <div class="chalk-topics-list" id="chalk-topics-list"></div>
+          </div>
+          <div class="chalkboard-footer">
+            <button
+              class="btn-primary"
+              id="open-notebook-btn"
+              onclick="openNotebook()"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+              </svg>
+              Open My Notebook
+            </button>
+            <button class="btn-secondary" onclick="saveAndDiscuss()">
+              Go to Discussion
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Class Roster -->
+        <div class="roster-panel">
+          <div class="roster-header">
+            <h3 class="roster-title">Classmates</h3>
+            <span class="roster-count" id="roster-count">5 students</span>
+          </div>
+          <div class="roster-list" id="roster-list"></div>
+          <div class="confusion-meter-wrap">
+            <div class="confusion-meter-label">
+              <span>Class Confusion</span>
+              <span id="confusion-pct">0%</span>
+            </div>
+            <div class="confusion-meter-bar">
+              <div class="confusion-meter-fill" id="confusion-meter-fill"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════
+       SCENE 3 – DISCUSSION HUB
+       ════════════════════════════════ -->
+    <section class="scene" id="scene-discussion">
+      <div class="discussion-bg">
+        <div class="dot-bg"></div>
+        <div class="bg-blob blob-6"></div>
+        <div class="bg-blob blob-7"></div>
+      </div>
+      <div class="discussion-center">
+        <div class="discussion-header">
+          <h1 class="disc-title"><span class="hl">Discussion</span> Hub</h1>
+          <p class="disc-sub" id="disc-sub">
+            Connect with classmates on confusing topics
+          </p>
+        </div>
+        <div class="confused-summary-strip" id="confused-strip"></div>
+        <div class="rooms-grid" id="rooms-container"></div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════
+       NOTEBOOK OVERLAY
+       ════════════════════════════════ -->
+    <div id="notebook-overlay">
+      <div id="notebook-modal">
+        <div class="modal-header">
+          <div class="modal-header-left">
+            <div class="modal-icon-wrap">📓</div>
+            <div>
+              <h2 class="modal-title">My Confusion Notes</h2>
+              <p class="modal-sub" id="nb-subtitle">
+                Select the topics you didn't understand
+              </p>
+            </div>
+          </div>
+          <div class="modal-header-right">
+            <button
+              class="btn-ghost-sm"
+              id="nb-edit-toggle"
+              onclick="toggleNbEdit()"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+                />
+                <path
+                  d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
+                />
+              </svg>
+              Edit
+            </button>
+            <button
+              class="btn-icon-close"
+              title="Close notebook"
+              onclick="closeNotebook()"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="notebook-body">
+          <div id="notebook-topics"></div>
+          <div class="add-topic-row hidden" id="add-topic-row">
+            <input
+              class="add-topic-input"
+              id="add-topic-input"
+              placeholder="Type a topic and press Enter…"
+              onkeydown="if (event.key === 'Enter') confirmAddTopic();"
+            />
+            <button class="btn-add-topic" onclick="confirmAddTopic()">
+              Add
+            </button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div class="marked-count-label" id="marked-count-label">
+            0 topics marked
+          </div>
+          <div class="modal-footer-actions">
+            <button class="btn-ghost" onclick="closeNotebook()">Close</button>
+            <button class="btn-primary" onclick="saveAndDiscuss()">
+              Save & Discuss
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════
+       TIMETABLE EDITOR OVERLAY
+       ════════════════════════════════ -->
+    <div id="tt-editor-overlay">
+      <div id="tt-editor-modal">
+        <div class="modal-header">
+          <div class="modal-header-left">
+            <div class="modal-icon-wrap">📋</div>
+            <div>
+              <h2 class="modal-title">Edit Timetable</h2>
+              <p class="modal-sub">Add, edit or remove today's lectures</p>
+            </div>
+          </div>
+          <button
+            class="btn-icon-close"
+            title="Close editor"
+            onclick="closeTimetableEditor()"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="te-body" id="te-body"></div>
+        <div class="modal-footer">
+          <button class="btn-ghost" onclick="closeTimetableEditor()">
+            Cancel
+          </button>
+          <button class="btn-primary" onclick="saveTimetable()">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
+              />
+              <polyline points="17 21 17 13 7 13 7 21" />
+              <polyline points="7 3 7 8 15 8" />
+            </svg>
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════
+       CHAT / DISCUSSION PANEL
+       ════════════════════════════════ -->
+    <div id="chat-overlay">
+      <div id="chat-modal">
+        <div class="chat-header">
+          <div class="chat-header-left">
+            <div class="chat-room-avatar" id="chat-room-icon">👥</div>
+            <div>
+              <div class="chat-room-title" id="chat-room-title">
+                GROUP STUDY
+              </div>
+              <div class="chat-ref-tag" id="chat-ref-tag">📌 Topic</div>
+            </div>
+          </div>
+          <div class="chat-header-right">
+            <div class="chat-online-pill">
+              <span class="live-dot"></span>
+              <span id="online-count">12 online</span>
+            </div>
+            <button
+              class="btn-icon-close"
+              title="Close chat"
+              onclick="closeChat()"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-input-area">
+          <div class="chat-input-wrap">
+            <input
+              class="chat-input"
+              id="chat-input"
+              placeholder="Ask about a topic…"
+              onkeydown="if (event.key === 'Enter') sendMessage();"
+            />
+            <button
+              class="send-btn"
+              title="Send message"
+              onclick="sendMessage()"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
