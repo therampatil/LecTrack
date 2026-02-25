@@ -1,0 +1,31 @@
+# ── Secrets (NEVER commit these) ──────────────────
+config.js
+.env
+.env.local
+.env.*.local
+
+# ── macOS ──────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+
+# ── Editors ────────────────────────────────────────
+.vscode/settings.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# ── Dependency directories ─────────────────────────
+node_modules/
+.npm
+
+# ── Build output ───────────────────────────────────
+dist/
+build/
+.cache/
+
+# ── Logs ───────────────────────────────────────────
+*.log
+npm-debug.log*
