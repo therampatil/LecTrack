@@ -1,0 +1,14 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Serve LecTrack locally",
+      "type": "shell",
+      "command": "npx",
+      "args": ["serve", ".", "--listen", "5500", "--no-clipboard"],
+      "isBackground": true,
+      "problemMatcher": [],
+      "group": "build"
+    }
+  ]
+}

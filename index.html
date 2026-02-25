@@ -4,11 +4,34 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LecTrack – Lecture Confusion Tracker</title>
-    <!-- Redirect unauthenticated users to signup -->
-    <script>
-      if (!sessionStorage.getItem("lt_logged_in")) {
-        window.location.replace("signup.html");
-      }
+    <!-- Redirect unauthenticated users to login -->
+    <script type="module">
+      import { supabase } from "./supabase.js";
+      (async function () {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session) {
+          window.location.replace("login.html");
+          return;
+        }
+        // Sync sessionStorage
+        sessionStorage.setItem("lt_logged_in", "1");
+        sessionStorage.setItem("lt_user_id", session.user.id);
+        const name =
+          session.user.user_metadata?.full_name || session.user.email || "";
+        const initials =
+          name
+            .split(" ")
+            .map((w) => w[0])
+            .join("")
+            .toUpperCase()
+            .slice(0, 2) || "??";
+        sessionStorage.setItem("lt_initials", initials);
+        // Update nav avatar
+        const el = document.getElementById("nav-avatar-initials");
+        if (el) el.textContent = initials;
+      })();
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -65,13 +88,24 @@
           title="My Profile"
           aria-label="My Profile"
         >
-          <div class="nav-avatar">AT</div>
+          <div class="nav-avatar" id="nav-avatar-initials">AT</div>
         </a>
       </div>
     </nav>
 
     <!-- ── TRANSITION OVERLAY ── -->
     <div id="transition-overlay"></div>
+
+    <!-- ── NAV AVATAR INITIALS ── -->
+    <script>
+      (function () {
+        var initials = sessionStorage.getItem("lt_initials");
+        if (initials) {
+          var el = document.getElementById("nav-avatar-initials");
+          if (el) el.textContent = initials;
+        }
+      })();
+    </script>
 
     <!-- ════════════════════════════════
        SCENE 1 – LOBBY / NOTICEBOARD
